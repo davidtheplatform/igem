@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Megi</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .btn-primary {
+            background-color: rgb(239, 0, 10);
+            border-color: rgb(239, 0, 10);
+        }
+
+        .btn-primary:hover {
+            background-color: #ff1a1a;
+            border-color: #ff1a1a;
+        }
+
+        .form-control {
+            background-color: #333;
+            color: #fff;
+            border-color: #555;
+        }
+
+        #message-input {
+            resize: none;
+            height: 40px;
+            transition: height 0.2s;
+            flex-grow: 1;
+        }
+
+        .expanded {
+            height: 80px;
+        }
+
+        #message-list {
+            margin-top: 20px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        .message strong {
+            color: rgb(239, 0, 10);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .color-picker {
+            display: flex;
+            align-items: center;
+        }
+
+        .older-messages {
+            margin-top: 20px;
+            border-top: 1px solid #555;
+            padding-top: 10px;
+        }
+
+        .older-messages h3 {
+            color: #777;
+        }
+
+        .admin-button {
+            margin-right: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .close-button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Megi</h1>
+            <button class="btn btn-primary admin-button" id="admin-btn" onclick="openAdminPage()" style="display: none;">Admin</button>
+            <button class="btn btn-primary" id="settings-btn" onclick="openSettings()">Settings</button>
+        </div>
+        <div id="username-section">
+            <div class="form-group">
+                <label for="name-input">Name:</label>
+                <input type="text" class="form-control" id="name-input" maxlength="20">
+            </div>
+            <div class="color-picker">
+                <label for="color-input">Message Color:</label>
+                <input type="color" id="color-input" value="#ef000a">
+            </div>
+            <button class="btn btn-primary" onclick="setUserSettings()">Save</button>
+            <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
+            <button class="btn btn-secondary" onclick="toggleAdminMode()">Toggle Admin Mode</button>
+        </div>
+        <div id="admin-section" style="display: none;">
+            <div class="form-group">
+                <label for="password-input">Admin Password:</label>
+                <input type="password" class="form-control" id="password-input">
+            </div>
+            <button class="btn btn-primary" onclick="deleteMessage()">Message Deletion Menu</button>
+            <button class="btn btn-secondary" onclick="closeAdminPage()">Close</button>
+        </div>
+        <div id="chat-section" style="display: none;">
+            <div class="input-group">
+                <textarea class="form-control" id="message-input" rows="1" maxlength="1500" placeholder="Type your message here..." oninput="expandMessageInput()"></textarea>
+                <button class="btn btn-primary" onclick="sendMessage()" style="margin-left: 10px;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div id="message-list"></div>
+            <div class="older-messages">
+                <h3>Older Messages</h3>
+                <div id="older-message-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'https://megi-api.atticat.tech';
+
+        const usernameSection = document.getElementById("username-section");
+        const adminSection = document.getElementById("admin-section");
+        const chatSection = document.getElementById("chat-section");
+        const nameInput = document.getElementById("name-input");
+        const colorInput = document.getElementById("color-input");
+        const passwordInput = document.getElementById("password-input");
+        const messageInput = document.getElementById("message-input");
+        const adminButton = document.getElementById("admin-btn");
+
+        let isAdminMode = false;
+
+        function getUsername() {
+            const username = localStorage.getItem("username");
+            return username ? username : null;
+        }
+
+        function getUserColor() {
+            const color = localStorage.getItem("color");
+            return color ? color : '#ef000a';
+        }
+
+        function isAdminEnabled() {
+            const adminEnabled = localStorage.getItem("adminEnabled");
+            return adminEnabled === "true";
+        }
+
+        function setUsernameColor() {
+            const username = getUsername();
+            const color = getUserColor();
+
+            nameInput.value = username;
+            colorInput.value = color;
+        }
+
+        function setUserSettings() {
+            const name = nameInput.value;
+            const color = colorInput.value;
+
+            if (name.trim() !== "") {
+                localStorage.setItem("username", name);
+                localStorage.setItem("color", color);
+                setUsernameColor();
+                usernameSection.style.display = "none";
+                chatSection.style.display = "block";
+                getMessages();
+            }
+        }
+
+        function openSettings() {
+            setUsernameColor();
+            usernameSection.style.display = "block";
+            adminSection.style.display = "none";
+            chatSection.style.display = "none";
+        }
+
+        function openAdminPage() {
+            usernameSection.style.display = "none";
+            adminSection.style.display = "block";
+            chatSection.style.display = "none";
+
+        }
+
+        function closeSettings() {
+            usernameSection.style.display = "none";
+            chatSection.style.display = "block";
+        }
+
+        function closeAdminPage() {
+            adminSection.style.display = "none";
+            chatSection.style.display = "block";
+        }
+
+        function getMessages() {
+            fetch(`${apiUrl}/api/messages`)
+                .then(response => response.json())
+                .then(data => {
+                    const messageList = document.getElementById("message-list");
+                    const olderMessageList = document.getElementById("older-message-list");
+                    messageList.innerHTML = "";
+                    olderMessageList.innerHTML = "";
+                    if (data && data.length > 0) {
+                        data.reverse().forEach(message => {
+                            const messageElement = document.createElement("p");
+                            messageElement.className = "message";
+                            const nameElement = document.createElement("strong");
+                            nameElement.style.color = message.color;
+                            nameElement.textContent = message.name;
+                            messageElement.appendChild(nameElement);
+                            messageElement.innerHTML += `: ${message.content}`;
+                            messageElement.title = `ID: ${message.id}\n${new Date(message.timestamp * 1000).toLocaleString()}`; // Display ID, date, and time on hover
+                            const currentTimestamp = Math.floor(Date.now() / 1000);
+                            if (currentTimestamp - message.timestamp <= 4 * 60 * 60) {
+                                messageList.appendChild(messageElement);
+                            } else {
+                                olderMessageList.appendChild(messageElement);
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+
+        function sendMessage() {
+            const name = getUsername();
+            const content = messageInput.value;
+            const color = getUserColor();
+
+            if (content.trim() !== "") {
+                const messageData = {
+                    name: name,
+                    content: content,
+                    color: color
+                };
+
+                fetch(`${apiUrl}/api/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(messageData)
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            messageInput.value = "";
+                            expandMessageInput();
+                            getMessages();
+                        } else {
+                            response.json().then(data => {
+                                // Display error message
+                                alert(data.error);
+                            });
+                        }
+                    });
+            }
+        }
+
+        function expandMessageInput() {
+            messageInput.style.height = "40px";
+            messageInput.style.height = (messageInput.scrollHeight) + "px";
+        }
+
+        function deleteMessage() {
+            const password = passwordInput.value;
+            const messageId = parseInt(prompt("Enter the ID of the message you want to delete:"));
+
+            if (isNaN(messageId)) {
+                alert("Invalid message ID.");
+                return;
+            }
+
+            const deleteData = {
+                password: password
+            };
+
+            fetch(`${apiUrl}/api/messages/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(deleteData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        passwordInput.value = "";
+                        passwordInput.blur();
+                        alert("Message deleted successfully.");
+                        getMessages();
+                    } else {
+                        response.json().then(data => {
+                            alert(data.error);
+                        });
+                    }
+                });
+        }
+        function toggleAdminMode() {
+            isAdminMode = !isAdminMode;
+            localStorage.setItem("adminEnabled", isAdminMode.toString());
+            alert(`Admin mode is now ${isAdminMode ? 'enabled' : 'disabled'}.`);
+        }
+
+        window.onload = function () {
+            const username = getUsername();
+            if (username) {
+                setUsernameColor();
+                usernameSection.style.display = "none";
+                chatSection.style.display = "block";
+                getMessages();
+            }
+
+            if (isAdminEnabled()) {
+                adminButton.style.display = "block";
+            } else {
+                adminButton.style.display = "none";
+            }
+        };
+    </script>
