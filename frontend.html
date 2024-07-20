@@ -94,7 +94,8 @@
     <div class="container">
         <div class="header">
             <h1>Megi</h1>
-            <button class="btn btn-primary admin-button" id="admin-btn" onclick="openAdminPage()" style="display: none;">Admin</button>
+            <button class="btn btn-primary admin-button" id="admin-btn" onclick="openAdminPage()"
+                style="display: none;">Admin</button>
             <button class="btn btn-primary" id="settings-btn" onclick="openSettings()">Settings</button>
         </div>
         <div id="username-section">
@@ -120,7 +121,8 @@
         </div>
         <div id="chat-section" style="display: none;">
             <div class="input-group">
-                <textarea class="form-control" id="message-input" rows="1" maxlength="1500" placeholder="Type your message here..." oninput="expandMessageInput()"></textarea>
+                <textarea class="form-control" id="message-input" rows="1" maxlength="1500"
+                    placeholder="Type your message here..." oninput="expandMessageInput()"></textarea>
                 <button class="btn btn-primary" onclick="sendMessage()" style="margin-left: 10px;">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -280,7 +282,9 @@
         }
 
         function deleteMessage() {
-            const password = passwordInput.value;
+            // Assuming there's an input element with the id 'password-input', correct the variable name to match the id
+            const passwordInput = document.getElementById('password-input'); // Corrected variable name to match the input element's ID
+            const password = passwordInput.value; // Now correctly accessing the value property
             const messageId = parseInt(prompt("Enter the ID of the message you want to delete:"));
 
             if (isNaN(messageId)) {
@@ -333,4 +337,5 @@
                 adminButton.style.display = "none";
             }
         };
+        setInterval(getMessages, 1000);
     </script>
