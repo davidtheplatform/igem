@@ -1,0 +1,81 @@
+body {
+    background-color: #222;
+    color: #fff;
+}
+
+.container {
+    margin-top: 50px;
+}
+
+.btn-primary {
+    background-color: rgb(239, 0, 10);
+    border-color: rgb(239, 0, 10);
+}
+
+.btn-primary:hover {
+    background-color: #ff1a1a;
+    border-color: #ff1a1a;
+}
+
+.form-control {
+    background-color: #333;
+    color: #fff;
+    border-color: #555;
+}
+
+#message-input {
+    resize: none;
+    height: 40px;
+    transition: height 0.2s;
+    flex-grow: 1;
+}
+
+.expanded {
+    height: 80px;
+}
+
+#message-list {
+    margin-top: 20px;
+}
+
+.message {
+    margin-bottom: 10px;
+}
+
+.message strong {
+    color: rgb(239, 0, 10);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.color-picker {
+    display: flex;
+    align-items: center;
+}
+
+.older-messages {
+    margin-top: 20px;
+    border-top: 1px solid #555;
+    padding-top: 10px;
+}
+
+.older-messages h3 {
+    color: #777;
+}
+
+.admin-button {
+    margin-right: 10px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+}
+
+.close-button {
+    margin-top: 10px;
+}
