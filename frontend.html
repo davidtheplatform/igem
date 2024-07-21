@@ -55,7 +55,7 @@
     </div>
 
     <script>
-        const apiUrl = 'https://megi-api.atticat.tech';
+        const apiUrl = 'https://igem.davidtheplatform.eu.org';
 
         const usernameSection = document.getElementById("username-section");
         const adminSection = document.getElementById("admin-section");
@@ -147,7 +147,7 @@
                     messageList.innerHTML = "";
                     olderMessageList.innerHTML = "";
                     if (data && data.length > 0) {
-                        data.reverse().forEach(message => {
+                        data.forEach(message => {
                             const messageElement = document.createElement("div");
                             messageElement.className = "message";
 
@@ -159,7 +159,7 @@
 
                             const contentElement = document.createElement("span");
                             message.content.split('\n').forEach((line, index, array) => {
-                                contentElement.appendChild(document.createTextNode(line));
+                                contentElement.innerHTML += line;
                                 if (index < array.length - 1) {
                                     contentElement.appendChild(document.createElement("br"));
                                 }
