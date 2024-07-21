@@ -142,6 +142,8 @@
             fetch(`${apiUrl}/api/messages`)
                 .then(response => response.json())
                 .then(data => {
+                    setTimeout(getMessages, 1000);
+                    
                     const messageList = document.getElementById("message-list");
                     const olderMessageList = document.getElementById("older-message-list");
                     messageList.innerHTML = "";
@@ -292,5 +294,5 @@
                 adminButton.style.display = "none";
             }
         };
-        setInterval(getMessages, 1000);
+        setTimeout(getMessages, 1);
     </script>
