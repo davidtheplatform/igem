@@ -67,6 +67,7 @@
         const adminButton = document.getElementById("admin-btn");
 
         let isAdminMode = false;
+        var gettingMessages = false;
 
         function handleKeyDown(event) {
             // Check if Enter is pressed without Shift
@@ -139,10 +140,14 @@
         }
 
         function getMessages() {
+            if (gettingMessages) return; // don't send multiple requests at the same time
+            gettingMessage = true;
+            
             fetch(`${apiUrl}/api/messages`)
                 .then(response => response.json())
                 .then(data => {
-                    setTimeout(getMessages, 1000);
+                    // at this point the http request has finished and we can send another one
+                    gettingMessage = false;
                     
                     const messageList = document.getElementById("message-list");
                     const olderMessageList = document.getElementById("older-message-list");
@@ -188,6 +193,7 @@
                     }
                 })
                 .catch(error => {
+                    gettingMessage = false;
                     console.log(error);
                 });
         }
@@ -294,5 +300,5 @@
                 adminButton.style.display = "none";
             }
         };
-        setTimeout(getMessages, 1);
+        setInterval(getMessages, 1000);
     </script>
