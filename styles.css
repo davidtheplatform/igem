@@ -40,6 +40,9 @@ body {
 
 .message {
     margin-bottom: 10px;
+    word-wrap: break-word; /* Break long words and wrap to the next line */
+    white-space: pre-wrap; /* Preserve whitespace and wrap text */
+    overflow: hidden;
 }
 
 .message strong {
