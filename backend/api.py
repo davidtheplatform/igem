@@ -1,4 +1,4 @@
-import json
+import sqlite3
 import time
 import os
 from dotenv import load_dotenv
@@ -13,24 +13,42 @@ CORS(app)  # Enable CORS for all routes
 socketio = SocketIO(app)
 load_dotenv()
 
-messages = []
 password = os.environ.get('PASSWORD')
 presence = {}  # Store presence information
 
-def load_messages():
-    global messages
-    try:
-        with open('messages.json', 'r') as file:
-            messages = json.load(file)
-    except FileNotFoundError:
-        messages = []
+# Database setup
+conn = sqlite3.connect('messages.db', check_same_thread=False)
+cursor = conn.cursor()
 
-def save_messages():
-    with open('messages.json', 'w') as file:
-        json.dump(messages, file, indent=4)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    color TEXT NOT NULL
+)
+''')
+conn.commit()
+
+def load_messages():
+    cursor.execute('SELECT id, name, content, timestamp, color FROM messages')
+    rows = cursor.fetchall()
+    messages = [{'id': row[0], 'name': row[1], 'content': row[2], 'timestamp': row[3], 'color': row[4]} for row in rows]
+    return messages
+
+def save_message(name, content, timestamp, color):
+    cursor.execute('INSERT INTO messages (name, content, timestamp, color) VALUES (?, ?, ?, ?)',
+                   (name, content, timestamp, color))
+    conn.commit()
+
+def delete_message(message_id):
+    cursor.execute('DELETE FROM messages WHERE id = ?', (message_id,))
+    conn.commit()
 
 @app.route('/api/messages', methods=['GET'])
 def get_messages():
+    messages = load_messages()
     return jsonify(messages[-50:])
 
 @app.route('/api/messages', methods=['POST'])
@@ -44,23 +62,17 @@ def add_message():
     rgb_color = request.json.get('color', [239, 0, 10])
 
     if len(content) <= 1500:
-        message = {'id': len(messages), 'name': name, 'content': content, 'timestamp': timestamp, 'color': rgb_color}
-        messages.append(message)
-        save_messages()
+        save_message(name, content, timestamp, str(rgb_color))
         return jsonify({'message': 'Message sent successfully.'}), 201
     else:
         return jsonify({'error': 'Message content exceeds the maximum limit of 1500 characters.'}), 400
 
 @app.route('/api/messages/<int:message_id>', methods=['DELETE'])
-def delete_message(message_id):
+def delete_message_route(message_id):
     password_input = request.args.get('password')
     if password_input == password:
-        for message in messages:
-            if message['id'] == message_id:
-                messages.remove(message)
-                save_messages()
-                return jsonify({'message': 'Message deleted successfully.'}), 200
-        return jsonify({'error': 'Message not found.'}), 404
+        delete_message(message_id)
+        return jsonify({'message': 'Message deleted successfully.'}), 200
     else:
         return jsonify({'error': 'Unauthorized access. Please check your password and try again.'}), 401
 
@@ -90,5 +102,4 @@ def get_online_users():
 
 if __name__ == '__main__':
     profanity.load_censor_words()
-    load_messages()
     socketio.run(app, allow_unsafe_werkzeug=True, port=5023)
