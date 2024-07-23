@@ -29,10 +29,19 @@ CREATE TABLE IF NOT EXISTS messages (
     color TEXT NOT NULL
 )
 ''')
+cursor.execute('''
+CREATE INDEX IF NOT EXISTS messages_id_idx ON messages(id)
+''')
 conn.commit()
 
-def load_messages():
-    cursor.execute('SELECT id, name, content, timestamp, color FROM messages')
+def load_messages(start_id=-1):
+    if start_id == -1:
+        cursor.execute('''
+SELECT * FROM (
+    SELECT id, name, content, timestamp, color FROM messages ORDER BY id DESC LIMIT 50
+) ORDER BY id ASC''')
+    else:
+        cursor.execute('SELECT id, name, content, timestamp, color FROM messages WHERE id >= ? ORDER BY id LIMIT 50', (start_id,))
     rows = cursor.fetchall()
     messages = [{'id': row[0], 'name': row[1], 'content': row[2], 'timestamp': row[3], 'color': row[4]} for row in rows]
     return messages
@@ -48,8 +57,11 @@ def delete_message(message_id):
 
 @app.route('/api/messages', methods=['GET'])
 def get_messages():
-    messages = load_messages()
-    return jsonify(messages[-50:])
+    if request.args.get('start_post') is not None:
+        messages = load_messages(int(request.args.get('start_post')))
+    else:
+        messages = load_messages()
+    return jsonify(messages)
 
 @app.route('/api/messages', methods=['POST'])
 def add_message():
@@ -99,6 +111,12 @@ def get_online_users():
     now = datetime.now()
     online_users = [user for user, last_seen in presence.items() if now - last_seen < timedelta(seconds=30)]
     return jsonify(online_users), 200
+
+@app.route('/')
+def index():
+    with open('../frontend.html') as f:
+        data = f.read()
+    return data
 
 if __name__ == '__main__':
     profanity.load_censor_words()
