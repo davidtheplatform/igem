@@ -278,7 +278,7 @@
                         if (response.ok) {
                             messageInput.value = "";
                             expandMessageInput();
-                            getMessages();
+                            // getMessages();
                         } else {
                             response.json().then(data => {
                                 // Display error message
