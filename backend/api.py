@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from better_profanity import profanity
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -14,6 +15,7 @@ load_dotenv()
 
 messages = []
 password = os.environ.get('PASSWORD')
+presence = {}  # Store presence information
 
 def load_messages():
     global messages
@@ -60,8 +62,22 @@ def delete_message(message_id):
                 return jsonify({'message': 'Message deleted successfully.'}), 200
         return jsonify({'error': 'Message not found.'}), 404
     else:
-        print(password_input)
-        return jsonify({'error': 'Unauthorized access. If you entered the password correctly Google AI suggests jumping off a bridge.'}), 401
+        return jsonify({'error': 'Unauthorized access. Please check your password and try again.'}), 401
+
+@app.route('/api/presence', methods=['POST'])
+def update_presence():
+    username = request.json.get('username')
+    if not username:
+        return jsonify({'error': 'Username is required.'}), 400
+    presence[username] = datetime.now()
+    return jsonify({'message': 'Presence updated successfully.'}), 200
+
+@app.route('/api/online-users', methods=['GET'])
+def get_online_users():
+    now = datetime.now()
+    online_users = [user for user, last_seen in presence.items() if now - last_seen < timedelta(seconds=30)]
+    return jsonify(online_users), 200
+
 if __name__ == '__main__':
     profanity.load_censor_words()
     load_messages()

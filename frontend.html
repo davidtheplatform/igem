@@ -16,6 +16,10 @@
                 style="display: none;">Admin</button>
             <button class="btn btn-primary" id="settings-btn" onclick="openSettings()">Settings</button>
         </div>
+        <div id="online-users-section">
+            <div id="onlineUsersList"></div> <!-- Changed from <ul> to <div> -->
+            <p></p>
+        </div>
         <div id="username-section">
             <div class="form-group">
                 <label for="name-input">Name:</label>
@@ -55,7 +59,7 @@
     </div>
 
     <script>
-        const apiUrl = 'https://megi-api.atticat.tech';
+        const apiUrl = 'http://127.0.0.1:5023';
 
         const usernameSection = document.getElementById("username-section");
         const adminSection = document.getElementById("admin-section");
@@ -81,6 +85,34 @@
         function getUsername() {
             const username = localStorage.getItem("username");
             return username ? username : null;
+        }
+
+        function sendPresence() {
+            const username = getUsername();
+            if (!username) {
+                console.error("Username not found");
+                return;
+            }
+
+            fetch(`${apiUrl}/api/presence`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Presence sent:', data);
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
         }
 
         function getUserColor() {
@@ -142,13 +174,13 @@
         function getMessages() {
             if (gettingMessages) return; // don't send multiple requests at the same time
             gettingMessage = true;
-            
+
             fetch(`${apiUrl}/api/messages`)
                 .then(response => response.json())
                 .then(data => {
                     // at this point the http request has finished and we can send another one
                     gettingMessage = false;
-                    
+
                     const messageList = document.getElementById("message-list");
                     const olderMessageList = document.getElementById("older-message-list");
                     messageList.innerHTML = "";
@@ -195,6 +227,26 @@
                 .catch(error => {
                     gettingMessage = false;
                     console.log(error);
+                });
+        }
+
+        function getOnlineUsers() {
+            fetch(`${apiUrl}/api/online-users`)
+                .then(response => response.json())
+                .then(data => {
+                    const onlineUsersList = document.getElementById('onlineUsersList');
+                    onlineUsersList.textContent = '';
+
+                    let usersText;
+                    if (data.length === 1) {
+                        usersText = document.createTextNode(`There is 1 user online: ${data.join(', ')}`);
+                    } else {
+                        usersText = document.createTextNode(`There are ${data.length} users online: ${data.join(', ')}`);
+                    }
+                    onlineUsersList.appendChild(usersText);
+                })
+                .catch(error => {
+                    console.error('Error fetching online users:', error);
                 });
         }
 
@@ -300,5 +352,9 @@
                 adminButton.style.display = "none";
             }
         };
+        getOnlineUsers();
+        sendPresence();
         setInterval(getMessages, 1000);
+        setInterval(sendPresence, 20000);
+        setInterval(getOnlineUsers, 3000); 
     </script>
