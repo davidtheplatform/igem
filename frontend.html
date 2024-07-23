@@ -174,13 +174,13 @@
 
         function getMessages() {
             if (gettingMessages) return; // don't send multiple requests at the same time
-            gettingMessage = true;
+            gettingMessages = true;
 
             fetch(`${apiUrl}/api/messages`)
                 .then(response => response.json())
                 .then(data => {
                     // at this point the http request has finished and we can send another one
-                    gettingMessage = false;
+                    gettingMessages = false;
 
                     const messageList = document.getElementById("message-list");
                     const olderMessageList = document.getElementById("older-message-list");
@@ -198,12 +198,7 @@
                             const colonTextNode = document.createTextNode(': ');
 
                             const contentElement = document.createElement("span");
-                            message.content.split('\n').forEach((line, index, array) => {
-                                contentElement.appendChild(document.createTextNode(line));
-                                if (index < array.length - 1) {
-                                    contentElement.appendChild(document.createElement("br"));
-                                }
-                            });
+                            contentElement.innerHTML = parseMarkdown(message.content);
 
                             const replyButton = document.createElement("button");
                             replyButton.className = "btn btn-link";
@@ -226,9 +221,18 @@
                     }
                 })
                 .catch(error => {
-                    gettingMessage = false;
+                    gettingMessages = false;
                     console.log(error);
                 });
+        }
+
+        function parseMarkdown(text) {
+            return text
+                .replace(/__(.*?)__/g, '<u>$1</u>') // underline
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>') // italic
+                .replace(/~~(.*?)~~/g, '<del>$1</del>') // strikethrough
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'); // link
         }
 
         function getOnlineUsers() {
