@@ -59,8 +59,17 @@
     </div>
 
     <script>
-        const apiUrl = 'https://megi-api.atticat.tech'; // Public API URL
-        // const apiUrl = 'http://127.0.0.1:5023'; // Development API URL
+        // Flag to force use of the public API, off by default
+        const forcePublicApi = false;
+
+        // Development and public API URLs
+        const devApiUrl = 'http://127.0.0.1:5023';
+        const publicApiUrl = 'https://megi-api.atticat.tech';
+
+        // Determine the API URL based on the current hostname and the forcePublicApi flag
+        const apiUrl = window.location.hostname === '127.0.0.1' && !forcePublicApi ? devApiUrl : publicApiUrl;
+
+        console.log('Using API URL:', apiUrl);
 
         const usernameSection = document.getElementById("username-section");
         const adminSection = document.getElementById("admin-section");
