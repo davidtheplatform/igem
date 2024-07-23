@@ -67,8 +67,18 @@ def delete_message(message_id):
 @app.route('/api/presence', methods=['POST'])
 def update_presence():
     username = request.json.get('username')
+    
+    # Check for profanity
+    if profanity.contains_profanity(username):
+        return jsonify({'error': 'Profanity is not allowed.'}), 400
+    
+    # Check for character limit
+    if len(username) > 20:
+        return jsonify({'error': 'Invalid username'}), 400
+    
     if not username:
         return jsonify({'error': 'Username is required.'}), 400
+    
     presence[username] = datetime.now()
     return jsonify({'message': 'Presence updated successfully.'}), 200
 
