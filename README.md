@@ -6,3 +6,4 @@ A wild chat app appears
 - online user tracker
 - replies
 - usernames and username colours
+- sqlite database
