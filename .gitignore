@@ -1,3 +1,4 @@
 # Don't leak secrets or database
 .env
 messages.json
+messages.db
