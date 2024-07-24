@@ -126,12 +126,6 @@ def get_online_users():
     online_users = [user for user, last_seen in presence.items() if now - last_seen < timedelta(seconds=30)]
     return jsonify(online_users), 200
 
-@app.route('/')
-def index():
-    with open('../frontend.html') as f:
-        data = f.read()
-    return data
-
 if __name__ == '__main__':
     profanity.load_censor_words()
     socketio.run(app, allow_unsafe_werkzeug=True, port=5023)
