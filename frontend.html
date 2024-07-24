@@ -58,6 +58,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.2.9/purify.min.js"></script>
     <script>
         // Flag to force use of the public API, off by default, won't affect public site if left on by accident
         const forcePublicApi = false;
@@ -236,12 +237,17 @@
         }
 
         function parseMarkdown(text) {
-            return text
+            const rawHtml = text
                 .replace(/__(.*?)__/g, '<u>$1</u>') // underline
                 .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
                 .replace(/\*(.*?)\*/g, '<em>$1</em>') // italic
                 .replace(/~~(.*?)~~/g, '<del>$1</del>') // strikethrough
                 .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'); // link
+
+            // Sanitize the HTML, removing <img> tags and other dangerous elements
+            const cleanHtml = DOMPurify.sanitize(rawHtml, { ALLOWED_TAGS: ['u', 'b', 'em', 'del', 'a'], ALLOWED_ATTR: ['href'] });
+
+            return cleanHtml;
         }
 
         function getOnlineUsers() {

@@ -7,6 +7,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from better_profanity import profanity
 from datetime import datetime, timedelta
+import re
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -60,6 +61,19 @@ def add_message():
     content = request.json['content']
     timestamp = int(time.time())
     rgb_color = request.json.get('color', [239, 0, 10])
+
+    # Check for script tags
+    if "<script>" in content.lower():
+        return jsonify({'error': 'XSS attempt blocked'}), 400
+
+    # Check for image tags with JavaScript
+    if re.search(r'<img[^>]+src\s*=\s*["\']?javascript:', content, re.IGNORECASE):
+        return jsonify({'error': 'XSS attempt blocked'}), 400
+
+    # Basic SQL Injection check
+    sql_injection_patterns = ["' or '1'='1", ";", "--"]
+    if any(pattern in content for pattern in sql_injection_patterns) or any(pattern in name for pattern in sql_injection_patterns):
+        return jsonify({'error': 'SQL Injection attempt blocked.'}), 400
 
     if len(content) <= 1500:
         save_message(name, content, timestamp, str(rgb_color))
