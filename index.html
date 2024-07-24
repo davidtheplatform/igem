@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Megi</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.2.9/purify.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Megi</h1>
+            <button class="btn btn-primary admin-button" id="admin-btn" onclick="openAdminPage()"
+                style="display: none;">Admin</button>
+            <button class="btn btn-primary" id="settings-btn" onclick="openSettings()">Settings</button>
+        </div>
+        <div id="online-users-section">
+            <div id="onlineUsersList"></div> <!-- Changed from <ul> to <div> -->
+            <p></p>
+        </div>
+        <div id="username-section">
+            <div class="form-group">
+                <label for="name-input">Name:</label>
+                <input type="text" class="form-control" id="name-input" maxlength="20">
+            </div>
+            <div class="color-picker">
+                <label for="color-input">Message Color:</label>
+                <input type="color" id="color-input" value="#ef000a">
+            </div>
+            <button class="btn btn-primary" onclick="setUserSettings()">Save</button>
+            <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
+            <button class="btn btn-secondary" onclick="toggleAdminMode()">Toggle Admin Mode</button>
+        </div>
+        <div id="admin-section" style="display: none;">
+            <div class="form-group">
+                <label for="password-input">Admin Password:</label>
+                <input type="password" class="form-control" id="password-input">
+            </div>
+            <button class="btn btn-primary" onclick="deleteMessage()">Message Deletion Menu</button>
+            <button class="btn btn-secondary" onclick="closeAdminPage()">Close</button>
+        </div>
+        <div id="chat-section" style="display: none;">
+            <div class="input-group">
+                <textarea class="form-control" id="message-input" rows="1" maxlength="1500"
+                    placeholder="Type your message here..." oninput="expandMessageInput()"
+                    onkeydown="handleKeyDown(event)"></textarea>
+                <button class="btn btn-primary" onclick="sendMessage()" style="margin-left: 10px;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div id="message-list"></div>
+            <div class="older-messages">
+                <h3>Older Messages</h3>
+                <div id="older-message-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Flag to force use of the public API, off by default, won't affect public site if left on by accident
+        const forcePublicApi = false;
+
+        // Development and public API URLs
+        const devApiUrl = 'http://127.0.0.1:5023';
+        const publicApiUrl = 'https://megi-api.atticat.tech';
+
+        // Determine the API URL based on the current hostname and the forcePublicApi flag
+        const apiUrl = window.location.hostname === '127.0.0.1' && !forcePublicApi ? devApiUrl : publicApiUrl;
+
+        console.log('Using API URL:', apiUrl);
+
+        const usernameSection = document.getElementById("username-section");
+        const adminSection = document.getElementById("admin-section");
+        const chatSection = document.getElementById("chat-section");
+        const nameInput = document.getElementById("name-input");
+        const colorInput = document.getElementById("color-input");
+        const passwordInput = document.getElementById("password-input");
+        const messageInput = document.getElementById("message-input");
+        const adminButton = document.getElementById("admin-btn");
+
+        let isAdminMode = false;
+        var gettingMessages = false;
+
+        function handleKeyDown(event) {
+            // Check if Enter is pressed without Shift
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Prevent default Enter behavior (new line)
+                sendMessage(); // Call the sendMessage function
+            }
+            // If Shift+Enter is pressed, allow the default behavior (new line)
+        }
+
+        function getUsername() {
+            const username = localStorage.getItem("username");
+            return username ? username : null;
+        }
+
+        function sendPresence() {
+            const username = getUsername();
+            if (!username) {
+                console.error("Username not found");
+                return;
+            }
+
+            fetch(`${apiUrl}/api/presence`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Presence sent:', data);
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+        function getUserColor() {
+            const color = localStorage.getItem("color");
+            return color ? color : '#ef000a';
+        }
+
+        function isAdminEnabled() {
+            const adminEnabled = localStorage.getItem("adminEnabled");
+            return adminEnabled === "true";
+        }
+
+        function setUsernameColor() {
+            const username = getUsername();
+            const color = getUserColor();
+
+            nameInput.value = username;
+            colorInput.value = color;
+        }
+
+        function setUserSettings() {
+            const name = nameInput.value;
+            const color = colorInput.value;
+
+            if (name.trim() !== "") {
+                localStorage.setItem("username", name);
+                localStorage.setItem("color", color);
+                setUsernameColor();
+                usernameSection.style.display = "none";
+                chatSection.style.display = "block";
+                getMessages();
+            }
+        }
+
+        function openSettings() {
+            setUsernameColor();
+            usernameSection.style.display = "block";
+            adminSection.style.display = "none";
+            chatSection.style.display = "none";
+        }
+
+        function openAdminPage() {
+            usernameSection.style.display = "none";
+            adminSection.style.display = "block";
+            chatSection.style.display = "none";
+
+        }
+
+        function closeSettings() {
+            usernameSection.style.display = "none";
+            chatSection.style.display = "block";
+        }
+
+        function closeAdminPage() {
+            adminSection.style.display = "none";
+            chatSection.style.display = "block";
+        }
+
+        function getMessages() {
+            if (gettingMessages) return; // don't send multiple requests at the same time
+            gettingMessages = true;
+
+            fetch(`${apiUrl}/api/messages`)
+                .then(response => response.json())
+                .then(data => {
+                    // at this point the http request has finished and we can send another one
+                    gettingMessages = false;
+
+                    const messageList = document.getElementById("message-list");
+                    const olderMessageList = document.getElementById("older-message-list");
+                    messageList.innerHTML = "";
+                    olderMessageList.innerHTML = "";
+                    if (data && data.length > 0) {
+                        data.reverse().forEach(message => {
+                            const messageElement = document.createElement("div");
+                            messageElement.className = "message";
+
+                            const nameElement = document.createElement("strong");
+                            nameElement.style.color = message.color;
+                            nameElement.textContent = message.name;
+
+                            const colonTextNode = document.createTextNode(': ');
+
+                            const contentElement = document.createElement("span");
+                            contentElement.innerHTML = parseMarkdown(message.content);
+
+                            const replyButton = document.createElement("button");
+                            replyButton.className = "btn btn-link";
+                            replyButton.innerHTML = '<i class="fas fa-reply" style="color: white;"></i>';
+                            replyButton.onclick = () => replyToMessage(message.name, message.content);
+
+                            messageElement.appendChild(nameElement);
+                            messageElement.appendChild(colonTextNode); // Add the colon and space
+                            messageElement.appendChild(contentElement);
+                            messageElement.appendChild(replyButton);
+
+                            messageElement.title = `ID: ${message.id}\n${new Date(message.timestamp * 1000).toLocaleString()}`; // Display ID, date, and time on hover
+                            const currentTimestamp = Math.floor(Date.now() / 1000);
+                            if (currentTimestamp - message.timestamp <= 4 * 60 * 60) {
+                                messageList.appendChild(messageElement);
+                            } else {
+                                olderMessageList.appendChild(messageElement);
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    gettingMessages = false;
+                    console.log(error);
+                });
+        }
+
+        function parseMarkdown(text) {
+            const rawHtml = text
+                .replace(/__(.*?)__/g, '<u>$1</u>') // underline
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>') // italic
+                .replace(/~~(.*?)~~/g, '<del>$1</del>') // strikethrough
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'); // link
+
+            // Sanitize the HTML, removing <img> and <script> tags along with other dangerous elements
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: ['u', 'b', 'em', 'del', 'a'],
+                ALLOWED_ATTR: ['href']
+            });
+
+            return cleanHtml;
+        }
+
+        function getOnlineUsers() {
+            fetch(`${apiUrl}/api/online-users`)
+                .then(response => response.json())
+                .then(data => {
+                    const onlineUsersList = document.getElementById('onlineUsersList');
+                    onlineUsersList.textContent = '';
+
+                    let usersText;
+                    if (data.length === 1) {
+                        usersText = document.createTextNode(`There is 1 user online: ${data.join(', ')}`);
+                    } else {
+                        usersText = document.createTextNode(`There are ${data.length} users online: ${data.join(', ')}`);
+                    }
+                    onlineUsersList.appendChild(usersText);
+                })
+                .catch(error => {
+                    console.error('Error fetching online users:', error);
+                });
+        }
+
+        function sendMessage() {
+            const name = getUsername();
+            const content = messageInput.value;
+            const color = getUserColor();
+
+            if (content.trim() !== "") {
+                const messageData = {
+                    name: name,
+                    content: content,
+                    color: color
+                };
+
+                fetch(`${apiUrl}/api/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(messageData)
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            messageInput.value = "";
+                            expandMessageInput();
+                            // getMessages();
+                        } else {
+                            response.json().then(data => {
+                                // Display error message
+                                alert(data.error);
+                            });
+                        }
+                    });
+            }
+        }
+
+        function expandMessageInput() {
+            messageInput.style.height = "40px";
+            messageInput.style.height = (messageInput.scrollHeight) + "px";
+        }
+
+        function deleteMessage() {
+            // Assuming there's an input element with the id 'password-input', correct the variable name to match the id
+            const passwordInput = document.getElementById('password-input'); // Corrected variable name to match the input element's ID
+            const password = passwordInput.value; // Now correctly accessing the value property
+            const messageId = parseInt(prompt("Enter the ID of the message you want to delete:"));
+
+            if (isNaN(messageId)) {
+                alert("Invalid message ID.");
+                return;
+            }
+
+            const deleteData = {
+                password: password
+            };
+
+            fetch(`${apiUrl}/api/messages/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(deleteData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        passwordInput.value = "";
+                        passwordInput.blur();
+                        alert("Message deleted successfully.");
+                        getMessages();
+                    } else {
+                        response.json().then(data => {
+                            alert(data.error);
+                        });
+                    }
+                });
+        }
+
+        function replyToMessage(name, content) {
+            messageInput.value = `"${name}: ${content}"\n\n`;
+            messageInput.focus();
+            expandMessageInput();
+        }
+
+        function toggleAdminMode() {
+            isAdminMode = !isAdminMode;
+            localStorage.setItem("adminEnabled", isAdminMode.toString());
+            alert(`Admin mode is now ${isAdminMode ? 'enabled' : 'disabled'}.`);
+        }
+
+        window.onload = function () {
+            const username = getUsername();
+            if (username) {
+                setUsernameColor();
+                usernameSection.style.display = "none";
+                chatSection.style.display = "block";
+                getMessages();
+            }
+
+            if (isAdminEnabled()) {
+                adminButton.style.display = "block";
+            } else {
+                adminButton.style.display = "none";
+            }
+        };
+        getOnlineUsers();
+        sendPresence();
+        setInterval(getMessages, 1000);
+        setInterval(sendPresence, 20000);
+        setInterval(getOnlineUsers, 3000); 
+    </script>
